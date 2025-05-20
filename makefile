@@ -2,8 +2,8 @@
 
 CC = gcc
 FLAG = -o
-SRC = legend_of_zelda.c
-TARGET = legend_of_zelda
+SRC = zelda_rogue.c
+TARGET = zelda_rogue
 
 $(TARGET): $(SRC)
 	$(CC) $(SRC) $(FLAG) $@
