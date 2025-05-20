@@ -404,7 +404,6 @@ void liberar_memoria(Aldea *aldea) {
 }
 
 void imprimir_mundo(Aldea *aldea) {
-    printf("\n=== Mundo del Juego ===\n");
     while (aldea) {
         printf("Aldea: %s\n", aldea->nombre);
         if (aldea->mazmorra_asociada) {
