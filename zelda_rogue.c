@@ -10,7 +10,7 @@
 #define PRECIO_ITEM_PRIMERA_MAZMORRA 25
 #define PRECIO_VIDA_ADICIONAL 100
 #define DINERO_CAMINO 10
-#define MAZMORRAS_PARA_PARALELO 3
+int MAZMORRAS_PARA_PARALELO;
 
 // Nombres predefinidos
 char *nombres_mazmorras[] = {"Agua", "Tierra", "Fuego", "Aire"};
@@ -74,6 +74,10 @@ bool tiene_item(Jugador *jugador, char *nombre_item);
 void mostrar_inventario(Jugador *jugador);
 
 // Implementación de funciones
+
+int aleatorio(int min, int max) {
+    return min + rand() % (max - min + 1);
+}
 
 char* combinar_nombres(int indice, char **base) {
     char *nombre = malloc(100);
@@ -241,17 +245,23 @@ void atacar_mazmorra(Jugador *jugador) {
         printf("¡Has derrotado la mazmorra %s!\n", jugador->mazmorra_actual->nombre);
         
         // Actualizar contadores de mazmorras derrotadas
-        if (jugador->aldea_actual->paralela) {
+        if (!jugador->aldea_actual->paralela) {
             jugador->mazmorras_derrotadas_paralelo++;
         } else {
             jugador->mazmorras_derrotadas_superior++;
         }
         
         // Lógica para mundo paralelo
-        if (jugador->mazmorras_derrotadas_superior >= MAZMORRAS_PARA_PARALELO && !jugador->mundo_paralelo_desbloqueado) {
+        if (jugador->mazmorras_derrotadas_superior >= MAZMORRAS_PARA_PARALELO) {
             jugador->mundo_paralelo_desbloqueado = true;
             printf("¡Has desbloqueado el mundo paralelo!\n");
-        }
+            // Transportar automáticamente al mundo paralelo
+            if (jugador->aldea_actual->paralela) {
+                jugador->aldea_actual = jugador->aldea_actual->paralela;
+                jugador->mazmorra_actual = NULL; // Sale de la mazmorra si estaba en una
+                printf("Has sido transportado al mundo paralelo. Ahora estás en %s\n", jugador->aldea_actual->nombre);
+            }
+        } 
     } else {
         printf("No tienes el ítem necesario (%s) para derrotar esta mazmorra.\n", 
                jugador->mazmorra_actual->item_requerido->nombre);
@@ -286,11 +296,23 @@ void comprar(Jugador *jugador) {
             break;
         case 2:
             if (jugador->dinero >= PRECIO_ITEM_PRIMERA_MAZMORRA) {
-                jugador->dinero -= PRECIO_ITEM_PRIMERA_MAZMORRA;
-                Item *item = crear_item();
-                strcpy(item->nombre, nombres_items[0]); // Ítem de la primera mazmorra
-                agregar_item_inventario(jugador, item);
-                printf("Has comprado el ítem %s\n", item->nombre);
+                // Obtener la primera mazmorra del mundo superior
+                Aldea *primera_aldea = jugador->aldea_actual;
+                while (primera_aldea->anterior != NULL) {
+                    primera_aldea = primera_aldea->anterior;
+                }
+                
+                if (primera_aldea && primera_aldea->mazmorra_asociada) {
+                    jugador->dinero -= PRECIO_ITEM_PRIMERA_MAZMORRA;
+                    Item *item = malloc(sizeof(Item));
+                    strcpy(item->nombre, primera_aldea->mazmorra_asociada->item_requerido->nombre);
+                    item->encontrado = false;
+                    item->siguiente = NULL;
+                    agregar_item_inventario(jugador, item);
+                    printf("Has comprado el ítem %s (requerido para la primera mazmorra)\n", item->nombre);
+                } else {
+                    printf("Error: No se pudo encontrar la primera mazmorra.\n");
+                }
             } else {
                 printf("No tienes suficiente dinero.\n");
             }
@@ -319,19 +341,27 @@ void transportar(Jugador *jugador) {
         printf("Aún no has desbloqueado el mundo paralelo.\n");
         return;
     }
-    
+
     if (jugador->mazmorra_actual) {
         printf("No puedes transportarte desde una mazmorra.\n");
         return;
     }
-    
+
     if (!jugador->aldea_actual->paralela) {
         printf("No hay aldea paralela asociada a esta aldea.\n");
         return;
     }
-    
+
+    // Si está en el mundo paralelo y no ha derrotado ninguna mazmorra allí, no puede regresar
+    if (jugador->aldea_actual->paralela->paralela == jugador->aldea_actual && jugador->mazmorras_derrotadas_paralelo == 0) {
+        printf("Debes derrotar al menos una mazmorra en el mundo paralelo antes de regresar al mundo superior.\n");
+        return;
+    }
+
     jugador->aldea_actual = jugador->aldea_actual->paralela;
-    printf("Te has transportado al mundo paralelo. Ahora estás en %s\n", jugador->aldea_actual->nombre);
+    printf("Te has transportado al %s. Ahora estás en %s\n",
+           (jugador->aldea_actual->paralela == jugador->aldea_actual) ? "mundo superior" : "mundo paralelo",
+           jugador->aldea_actual->nombre);
 }
 
 void mover(Jugador *jugador, char *direccion) {
@@ -413,7 +443,7 @@ void imprimir_mundo(Aldea *aldea) {
             printf("  Derrotada: %s\n", aldea->mazmorra_asociada->derrotada ? "Sí" : "No");
         }
         if (aldea->item_oculto) {
-            printf("  Ítem oculto en aldea: %s (%s)\n", aldea->item_oculto->nombre, 
+            printf("Ítem oculto en aldea: %s (%s)\n", aldea->item_oculto->nombre, 
                    aldea->item_oculto->encontrado ? "encontrado" : "no encontrado");
         }
         aldea = aldea->siguiente;
@@ -536,6 +566,9 @@ int main() {
         return 1;
     }
     
+    srand(time(NULL));
+    MAZMORRAS_PARA_PARALELO = aleatorio(1, num_aldeas);
+
     jugar(num_aldeas);
     return 0;
 }
