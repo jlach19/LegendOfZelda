@@ -246,10 +246,9 @@ void atacar_mazmorra(Jugador *jugador) {
         
         // Actualizar contadores de mazmorras derrotadas
         if (!jugador->aldea_actual->paralela) {
-            jugador->mazmorras_derrotadas_superior++;
-            printf("test ++");
-        } else {
             jugador->mazmorras_derrotadas_paralelo++;
+        } else {
+            jugador->mazmorras_derrotadas_superior++;
         }
         
         // Lógica para mundo paralelo
@@ -291,11 +290,23 @@ void comprar(Jugador *jugador) {
             break;
         case 2:
             if (jugador->dinero >= PRECIO_ITEM_PRIMERA_MAZMORRA) {
-                jugador->dinero -= PRECIO_ITEM_PRIMERA_MAZMORRA;
-                Item *item = crear_item();
-                strcpy(item->nombre, nombres_items[0]); // Ítem de la primera mazmorra
-                agregar_item_inventario(jugador, item);
-                printf("Has comprado el ítem %s\n", item->nombre);
+                // Obtener la primera mazmorra del mundo superior
+                Aldea *primera_aldea = jugador->aldea_actual;
+                while (primera_aldea->anterior != NULL) {
+                    primera_aldea = primera_aldea->anterior;
+                }
+                
+                if (primera_aldea && primera_aldea->mazmorra_asociada) {
+                    jugador->dinero -= PRECIO_ITEM_PRIMERA_MAZMORRA;
+                    Item *item = malloc(sizeof(Item));
+                    strcpy(item->nombre, primera_aldea->mazmorra_asociada->item_requerido->nombre);
+                    item->encontrado = false;
+                    item->siguiente = NULL;
+                    agregar_item_inventario(jugador, item);
+                    printf("Has comprado el ítem %s (requerido para la primera mazmorra)\n", item->nombre);
+                } else {
+                    printf("Error: No se pudo encontrar la primera mazmorra.\n");
+                }
             } else {
                 printf("No tienes suficiente dinero.\n");
             }
