@@ -242,10 +242,9 @@ void atacar_mazmorra(Jugador *jugador) {
         
         // Actualizar contadores de mazmorras derrotadas
         if (!jugador->aldea_actual->paralela) {
-            jugador->mazmorras_derrotadas_superior++;
-            printf("test ++");
-        } else {
             jugador->mazmorras_derrotadas_paralelo++;
+        } else {
+            jugador->mazmorras_derrotadas_superior++;
         }
         
         // Lógica para mundo paralelo
