@@ -10,7 +10,7 @@
 #define PRECIO_ITEM_PRIMERA_MAZMORRA 25
 #define PRECIO_VIDA_ADICIONAL 100
 #define DINERO_CAMINO 10
-#define MAZMORRAS_PARA_PARALELO 1
+int MAZMORRAS_PARA_PARALELO;
 
 // Nombres predefinidos
 char *nombres_mazmorras[] = {"Agua", "Tierra", "Fuego", "Aire"};
@@ -74,6 +74,10 @@ bool tiene_item(Jugador *jugador, char *nombre_item);
 void mostrar_inventario(Jugador *jugador);
 
 // Implementación de funciones
+
+int aleatorio(int min, int max) {
+    return min + rand() % (max - min + 1);
+}
 
 char* combinar_nombres(int indice, char **base) {
     char *nombre = malloc(100);
@@ -537,6 +541,9 @@ int main() {
         return 1;
     }
     
+    srand(time(NULL));
+    MAZMORRAS_PARA_PARALELO = aleatorio(1, num_aldeas);
+
     jugar(num_aldeas);
     return 0;
 }
