@@ -10,7 +10,7 @@
 #define PRECIO_ITEM_PRIMERA_MAZMORRA 25
 #define PRECIO_VIDA_ADICIONAL 100
 #define DINERO_CAMINO 10
-#define MAZMORRAS_PARA_PARALELO 3
+#define MAZMORRAS_PARA_PARALELO 1
 
 // Nombres predefinidos
 char *nombres_mazmorras[] = {"Agua", "Tierra", "Fuego", "Aire"};
@@ -241,14 +241,15 @@ void atacar_mazmorra(Jugador *jugador) {
         printf("¡Has derrotado la mazmorra %s!\n", jugador->mazmorra_actual->nombre);
         
         // Actualizar contadores de mazmorras derrotadas
-        if (jugador->aldea_actual->paralela) {
-            jugador->mazmorras_derrotadas_paralelo++;
-        } else {
+        if (!jugador->aldea_actual->paralela) {
             jugador->mazmorras_derrotadas_superior++;
+            printf("test ++");
+        } else {
+            jugador->mazmorras_derrotadas_paralelo++;
         }
         
         // Lógica para mundo paralelo
-        if (jugador->mazmorras_derrotadas_superior >= MAZMORRAS_PARA_PARALELO && !jugador->mundo_paralelo_desbloqueado) {
+        if (jugador->mazmorras_derrotadas_superior >= MAZMORRAS_PARA_PARALELO) {
             jugador->mundo_paralelo_desbloqueado = true;
             printf("¡Has desbloqueado el mundo paralelo!\n");
         }
