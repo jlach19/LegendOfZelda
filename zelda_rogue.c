@@ -51,7 +51,7 @@ typedef struct Jugador {
     int mazmorras_derrotadas_paralelo;
 } Jugador;
 
-// Prototipos de funciones
+// Prototipos de funciones actualizados
 char* combinar_nombres(int indice, char **base);
 Item* crear_item();
 Item* asignar_item_aleatorio();
@@ -60,18 +60,19 @@ void asignar_mazmorras(Aldea *aldea, int num_aldeas);
 void enlazar_mundos(Aldea *mundo_superior, Aldea *mundo_paralelo);
 void buscar_item(Jugador *jugador);
 void entrar_mazmorra(Jugador *jugador);
-void salir_mazmorra(Jugador *jugador);
+void salir_mazmorra(Jugador *jugador, int total_aldeas);
 void atacar_mazmorra(Jugador *jugador);
 void comprar(Jugador *jugador);
-void transportar(Jugador *jugador);
-void mover(Jugador *jugador, char *direccion);
+void transportar(Jugador *jugador, int total_aldeas);
+void mover(Jugador *jugador, char *direccion, int total_aldeas);
 bool verificar_victoria(Jugador *jugador, int num_aldeas);
 void liberar_memoria(Aldea *aldea);
-void imprimir_mundo(Aldea *aldea, Jugador *jugador);
+void imprimir_mundo(Aldea *aldea);
 bool perder_vida_aleatorio();
 void agregar_item_inventario(Jugador *jugador, Item *item);
 bool tiene_item(Jugador *jugador, char *nombre_item);
 void mostrar_inventario(Jugador *jugador);
+void mostrar_progreso(Jugador *jugador, int total_aldeas);
 
 // Implementación de funciones
 
@@ -145,9 +146,18 @@ void enlazar_mundos(Aldea *mundo_superior, Aldea *mundo_paralelo) {
     }
 }
 
+void mostrar_progreso(Jugador *jugador, int total_aldeas) {
+    printf("\n--- Progreso Actual ---\n");
+    printf("Mazmorras derrotadas (Mundo Superior): %d/%d\n", 
+           jugador->mazmorras_derrotadas_superior, total_aldeas);
+    printf("Mazmorras derrotadas (Mundo Paralelo): %d/%d\n", 
+           jugador->mazmorras_derrotadas_paralelo, total_aldeas);
+    printf("Estado mundo paralelo: %s\n\n",
+           jugador->mundo_paralelo_desbloqueado ? "DESBLOQUEADO" : "BLOQUEADO");
+}
+
 void buscar_item(Jugador *jugador) {
     if (jugador->mazmorra_actual) {
-        // Estamos en una mazmorra
         if (jugador->mazmorra_actual->item_oculto) {
             if (jugador->mazmorra_actual->item_oculto->encontrado) {
                 printf("Ya encontraste el ítem oculto en esta mazmorra.\n");
@@ -169,7 +179,6 @@ void buscar_item(Jugador *jugador) {
             }
         }
     } else {
-        // Estamos en una aldea
         if (jugador->aldea_actual->item_oculto) {
             if (jugador->aldea_actual->item_oculto->encontrado) {
                 printf("El ítem oculto de esta aldea ya fue encontrado.\n");
@@ -203,13 +212,12 @@ void entrar_mazmorra(Jugador *jugador) {
     printf("Has entrado a la mazmorra %s\n", jugador->mazmorra_actual->nombre);
 }
 
-void salir_mazmorra(Jugador *jugador) {
+void salir_mazmorra(Jugador *jugador, int total_aldeas) {
     if (!jugador->mazmorra_actual) {
         printf("No estás en una mazmorra.\n");
         return;
     }
     
-    // Buscar la aldea asociada a esta mazmorra
     Aldea *aldea = jugador->aldea_actual;
     while (aldea && aldea->mazmorra_asociada != jugador->mazmorra_actual) {
         aldea = aldea->siguiente;
@@ -218,7 +226,8 @@ void salir_mazmorra(Jugador *jugador) {
     if (aldea) {
         jugador->aldea_actual = aldea;
         jugador->mazmorra_actual = NULL;
-        printf("Has vuelto a la aldea %s\n", aldea->nombre);
+        printf("\nHas vuelto a la aldea %s\n", aldea->nombre);
+        mostrar_progreso(jugador, total_aldeas);
     } else {
         printf("Error: No se encontró la aldea asociada a esta mazmorra.\n");
     }
@@ -244,14 +253,12 @@ void atacar_mazmorra(Jugador *jugador) {
         jugador->mazmorra_actual->derrotada = true;
         printf("¡Has derrotado la mazmorra %s!\n", jugador->mazmorra_actual->nombre);
         
-        // Actualizar contadores de mazmorras derrotadas
         if (!jugador->aldea_actual->paralela) {
             jugador->mazmorras_derrotadas_paralelo++;
         } else {
             jugador->mazmorras_derrotadas_superior++;
         }
         
-        // Lógica para mundo paralelo
         if (jugador->mazmorras_derrotadas_superior >= MAZMORRAS_PARA_PARALELO) {
             jugador->mundo_paralelo_desbloqueado = true;
             printf("¡Has desbloqueado el mundo paralelo!\n");
@@ -290,7 +297,6 @@ void comprar(Jugador *jugador) {
             break;
         case 2:
             if (jugador->dinero >= PRECIO_ITEM_PRIMERA_MAZMORRA) {
-                // Obtener la primera mazmorra del mundo superior
                 Aldea *primera_aldea = jugador->aldea_actual;
                 while (primera_aldea->anterior != NULL) {
                     primera_aldea = primera_aldea->anterior;
@@ -330,7 +336,7 @@ void comprar(Jugador *jugador) {
     }
 }
 
-void transportar(Jugador *jugador) {
+void transportar(Jugador *jugador, int total_aldeas) {
     if (!jugador->mundo_paralelo_desbloqueado) {
         printf("Aún no has desbloqueado el mundo paralelo.\n");
         return;
@@ -348,9 +354,10 @@ void transportar(Jugador *jugador) {
     
     jugador->aldea_actual = jugador->aldea_actual->paralela;
     printf("Te has transportado al mundo paralelo. Ahora estás en %s\n", jugador->aldea_actual->nombre);
+    mostrar_progreso(jugador, total_aldeas);
 }
 
-void mover(Jugador *jugador, char *direccion) {
+void mover(Jugador *jugador, char *direccion, int total_aldeas) {
     if (jugador->mazmorra_actual) {
         printf("No puedes moverte entre aldeas desde una mazmorra. Usa 'ant' para volver.\n");
         return;
@@ -384,7 +391,8 @@ void mover(Jugador *jugador, char *direccion) {
             printf("¡Perdiste una vida en el camino! Vidas restantes: %d\n", jugador->vidas);
         }
         
-        printf("Ahora estás en %s\n", jugador->aldea_actual->nombre);
+        printf("\nAhora estás en la aldea %s\n", jugador->aldea_actual->nombre);
+        mostrar_progreso(jugador, total_aldeas);
     }
 }
 
@@ -419,23 +427,15 @@ void liberar_memoria(Aldea *aldea) {
     }
 }
 
-void imprimir_mundo(Aldea *aldea, Jugador *jugador) {
-    printf("\n=== Estado del Mundo ===\n");
-    printf("Mazmorras derrotadas - Superior: %d | Paralelo: %d\n", 
-           jugador->mazmorras_derrotadas_superior, 
-           jugador->mazmorras_derrotadas_paralelo);
-    printf("Mundo paralelo %s\n\n", 
-           jugador->mundo_paralelo_desbloqueado ? "DESBLOQUEADO" : "BLOQUEADO");
-
+void imprimir_mundo(Aldea *aldea) {
+    printf("\n=== Mundo del Juego ===\n");
     while (aldea) {
         printf("Aldea: %s\n", aldea->nombre);
         if (aldea->mazmorra_asociada) {
             printf("  Mazmorra: %s\n", aldea->mazmorra_asociada->nombre);
             printf("  Ítem requerido: %s\n", aldea->mazmorra_asociada->item_requerido->nombre);
-            printf("  Ítem oculto: %s\n", aldea->mazmorra_asociada->item_oculto ? 
-                  aldea->mazmorra_asociada->item_oculto->nombre : "Ninguno");
-            printf("  Estado: %s\n", aldea->mazmorra_asociada->derrotada ? 
-                  "DERROTADA" : "Pendiente");
+            printf("  Ítem oculto: %s\n", aldea->mazmorra_asociada->item_oculto ? aldea->mazmorra_asociada->item_oculto->nombre : "Ninguno");
+            printf("  Derrotada: %s\n", aldea->mazmorra_asociada->derrotada ? "Sí" : "No");
         }
         if (aldea->item_oculto) {
             printf("  Ítem oculto en aldea: %s (%s)\n", aldea->item_oculto->nombre, 
@@ -443,11 +443,11 @@ void imprimir_mundo(Aldea *aldea, Jugador *jugador) {
         }
         aldea = aldea->siguiente;
     }
-    printf("==================================\n\n");
+    printf("======================\n\n");
 }
 
 bool perder_vida_aleatorio() {
-    return (rand() % 4) == 0; // 25% de probabilidad de perder vida
+    return (rand() % 4) == 0;
 }
 
 void agregar_item_inventario(Jugador *jugador, Item *item) {
@@ -480,7 +480,6 @@ void mostrar_inventario(Jugador *jugador) {
     printf("=================\n");
 }
 
-// Función principal del juego
 void jugar(int num_aldeas) {
     srand(time(NULL));
     Aldea *mundo_superior = crear_aldeas(num_aldeas);
@@ -492,21 +491,20 @@ void jugar(int num_aldeas) {
 
     Jugador jugador = {3, 0, NULL, mundo_superior, NULL, false, 0, 0};
 
-    // Imprimir mundo generado
     printf("\n=== Mundo Superior ===\n");
-    imprimir_mundo(mundo_superior, &jugador);
+    imprimir_mundo(mundo_superior);
     printf("\n=== Mundo Paralelo ===\n");
-    imprimir_mundo(mundo_paralelo, &jugador);
+    imprimir_mundo(mundo_paralelo);
 
     while (jugador.vidas > 0) {
         if (jugador.mazmorra_actual) {
             printf("\nEstás en la mazmorra %s\n", jugador.mazmorra_actual->nombre);
             printf("Vidas: %d | Dinero: $%d\n", jugador.vidas, jugador.dinero);
-            printf("Comandos: busq, atac, ant, inv, mundo\n> ");
+            printf("Comandos: busq, atac, ant, inv\n> ");
         } else {
             printf("\nEstás en la aldea %s\n", jugador.aldea_actual->nombre);
             printf("Vidas: %d | Dinero: $%d\n", jugador.vidas, jugador.dinero);
-            printf("Comandos: busq, maz, compr, trans, ant, sig, inv, mundo\n> ");
+            printf("Comandos: busq, maz, compr, trans, ant, sig, inv\n> ");
         }
         
         char comando[10];
@@ -519,29 +517,19 @@ void jugar(int num_aldeas) {
         } else if (strcmp(comando, "compr") == 0 && !jugador.mazmorra_actual) {
             comprar(&jugador);
         } else if (strcmp(comando, "trans") == 0 && !jugador.mazmorra_actual) {
-            transportar(&jugador);
+            transportar(&jugador, num_aldeas);
         } else if (strcmp(comando, "ant") == 0) {
             if (jugador.mazmorra_actual) {
-                salir_mazmorra(&jugador);
+                salir_mazmorra(&jugador, num_aldeas);
             } else {
-                mover(&jugador, comando);
+                mover(&jugador, comando, num_aldeas);
             }
         } else if (strcmp(comando, "sig") == 0 && !jugador.mazmorra_actual) {
-            mover(&jugador, comando);
+            mover(&jugador, comando, num_aldeas);
         } else if (strcmp(comando, "atac") == 0 && jugador.mazmorra_actual) {
             atacar_mazmorra(&jugador);
         } else if (strcmp(comando, "inv") == 0) {
             mostrar_inventario(&jugador);
-        } else if (strcmp(comando, "mundo") == 0) {
-            printf("\n=== Resumen del Progreso ===\n");
-            printf("Mazmorras derrotadas (Superior): %d/%d\n", 
-                  jugador.mazmorras_derrotadas_superior, num_aldeas);
-            printf("Mazmorras derrotadas (Paralelo): %d/%d\n", 
-                  jugador.mazmorras_derrotadas_paralelo, num_aldeas);
-            printf("\n=== Mundo Superior ===\n");
-            imprimir_mundo(mundo_superior, &jugador);
-            printf("\n=== Mundo Paralelo ===\n");
-            imprimir_mundo(mundo_paralelo, &jugador);
         } else {
             printf("Comando inválido.\n");
         }
