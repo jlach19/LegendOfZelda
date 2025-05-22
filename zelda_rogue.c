@@ -67,7 +67,7 @@ void transportar(Jugador *jugador);
 void mover(Jugador *jugador, char *direccion);
 bool verificar_victoria(Jugador *jugador, int num_aldeas);
 void liberar_memoria(Aldea *aldea);
-void imprimir_mundo(Aldea *aldea);
+void imprimir_mundo(Aldea *aldea, Jugador *jugador);
 bool perder_vida_aleatorio();
 void agregar_item_inventario(Jugador *jugador, Item *item);
 bool tiene_item(Jugador *jugador, char *nombre_item);
@@ -419,14 +419,23 @@ void liberar_memoria(Aldea *aldea) {
     }
 }
 
-void imprimir_mundo(Aldea *aldea) {
+void imprimir_mundo(Aldea *aldea, Jugador *jugador) {
+    printf("\n=== Estado del Mundo ===\n");
+    printf("Mazmorras derrotadas - Superior: %d | Paralelo: %d\n", 
+           jugador->mazmorras_derrotadas_superior, 
+           jugador->mazmorras_derrotadas_paralelo);
+    printf("Mundo paralelo %s\n\n", 
+           jugador->mundo_paralelo_desbloqueado ? "DESBLOQUEADO" : "BLOQUEADO");
+
     while (aldea) {
         printf("Aldea: %s\n", aldea->nombre);
         if (aldea->mazmorra_asociada) {
             printf("  Mazmorra: %s\n", aldea->mazmorra_asociada->nombre);
             printf("  Ítem requerido: %s\n", aldea->mazmorra_asociada->item_requerido->nombre);
-            printf("  Ítem oculto: %s\n", aldea->mazmorra_asociada->item_oculto ? aldea->mazmorra_asociada->item_oculto->nombre : "Ninguno");
-            printf("  Derrotada: %s\n", aldea->mazmorra_asociada->derrotada ? "Sí" : "No");
+            printf("  Ítem oculto: %s\n", aldea->mazmorra_asociada->item_oculto ? 
+                  aldea->mazmorra_asociada->item_oculto->nombre : "Ninguno");
+            printf("  Estado: %s\n", aldea->mazmorra_asociada->derrotada ? 
+                  "DERROTADA" : "Pendiente");
         }
         if (aldea->item_oculto) {
             printf("  Ítem oculto en aldea: %s (%s)\n", aldea->item_oculto->nombre, 
@@ -434,7 +443,7 @@ void imprimir_mundo(Aldea *aldea) {
         }
         aldea = aldea->siguiente;
     }
-    printf("======================\n\n");
+    printf("==================================\n\n");
 }
 
 bool perder_vida_aleatorio() {
@@ -483,21 +492,21 @@ void jugar(int num_aldeas) {
 
     Jugador jugador = {3, 0, NULL, mundo_superior, NULL, false, 0, 0};
 
-    // Imprimir mundo generado (para depuración)
+    // Imprimir mundo generado
     printf("\n=== Mundo Superior ===\n");
-    imprimir_mundo(mundo_superior);
+    imprimir_mundo(mundo_superior, &jugador);
     printf("\n=== Mundo Paralelo ===\n");
-    imprimir_mundo(mundo_paralelo);
+    imprimir_mundo(mundo_paralelo, &jugador);
 
     while (jugador.vidas > 0) {
         if (jugador.mazmorra_actual) {
             printf("\nEstás en la mazmorra %s\n", jugador.mazmorra_actual->nombre);
             printf("Vidas: %d | Dinero: $%d\n", jugador.vidas, jugador.dinero);
-            printf("Comandos: busq, atac, ant, inv\n> ");
+            printf("Comandos: busq, atac, ant, inv, mundo\n> ");
         } else {
             printf("\nEstás en la aldea %s\n", jugador.aldea_actual->nombre);
             printf("Vidas: %d | Dinero: $%d\n", jugador.vidas, jugador.dinero);
-            printf("Comandos: busq, maz, compr, trans, ant, sig, inv\n> ");
+            printf("Comandos: busq, maz, compr, trans, ant, sig, inv, mundo\n> ");
         }
         
         char comando[10];
@@ -523,6 +532,16 @@ void jugar(int num_aldeas) {
             atacar_mazmorra(&jugador);
         } else if (strcmp(comando, "inv") == 0) {
             mostrar_inventario(&jugador);
+        } else if (strcmp(comando, "mundo") == 0) {
+            printf("\n=== Resumen del Progreso ===\n");
+            printf("Mazmorras derrotadas (Superior): %d/%d\n", 
+                  jugador.mazmorras_derrotadas_superior, num_aldeas);
+            printf("Mazmorras derrotadas (Paralelo): %d/%d\n", 
+                  jugador.mazmorras_derrotadas_paralelo, num_aldeas);
+            printf("\n=== Mundo Superior ===\n");
+            imprimir_mundo(mundo_superior, &jugador);
+            printf("\n=== Mundo Paralelo ===\n");
+            imprimir_mundo(mundo_paralelo, &jugador);
         } else {
             printf("Comando inválido.\n");
         }
