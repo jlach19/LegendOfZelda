@@ -12,6 +12,7 @@
 #define DINERO_CAMINO 10
 int MAZMORRAS_PARA_PARALELO;
 
+
 // Nombres predefinidos
 char *nombres_mazmorras[] = {"Agua", "Tierra", "Fuego", "Aire"};
 char *nombres_aldeas[] = {"Kakariko", "Hateno", "Gerudo", "Zora"};
@@ -40,6 +41,10 @@ typedef struct Aldea {
     struct Aldea *paralela;
     bool es_mundo_superior;
 } Aldea;
+
+// Apuntadores globales a las cabezas de los mundos
+Aldea *cabeza_mundo_superior = NULL;
+Aldea *cabeza_mundo_paralelo = NULL;
 
 typedef struct Jugador {
     int vidas;
@@ -260,6 +265,14 @@ void atacar_mazmorra(Jugador *jugador) {
     if (tiene_item(jugador, jugador->mazmorra_actual->item_requerido->nombre)) {
         jugador->mazmorra_actual->derrotada = true;
         printf("¡Has derrotado la mazmorra %s!\n", jugador->mazmorra_actual->nombre);
+
+        // Mostrar el estado actualizado del mundo
+        printf("\n=== Estado actualizado del mundo ===\n");
+        if (jugador->aldea_actual->es_mundo_superior) {
+            imprimir_mundo(cabeza_mundo_superior);
+        } else {
+            imprimir_mundo(cabeza_mundo_paralelo);
+        }
         
         // Actualizar contadores de mazmorras derrotadas usando el flag de la aldea actual
         if (jugador->aldea_actual->es_mundo_superior) {
@@ -269,24 +282,30 @@ void atacar_mazmorra(Jugador *jugador) {
         }
         
         // Lógica para desbloquear mundo paralelo
-        // Se desbloquea al derrotar N mazmorras del mundo SUPERIOR
         if (jugador->aldea_actual->es_mundo_superior && 
             jugador->mazmorras_derrotadas_superior >= MAZMORRAS_PARA_PARALELO &&
             !jugador->mundo_paralelo_desbloqueado) {
             
             jugador->mundo_paralelo_desbloqueado = true;
             printf("¡Has desbloqueado el mundo paralelo!\n");
-            
-            // Transportar automáticamente al mundo paralelo (opcional, como estaba)
             if (jugador->aldea_actual->paralela) {
-                // Salir de la mazmorra actual antes de transportar
                 printf("Saliendo de la mazmorra %s para el transporte...\n", jugador->mazmorra_actual->nombre);
                 jugador->mazmorra_actual = NULL; 
-
                 jugador->aldea_actual = jugador->aldea_actual->paralela;
                 printf("Has sido transportado automáticamente al %s. Ahora estás en %s\n",
                        (jugador->aldea_actual->es_mundo_superior) ? "mundo superior" : "mundo paralelo",
                        jugador->aldea_actual->nombre);
+
+                // Imprimir el estado del mundo al que llegas con formato
+                if (jugador->aldea_actual->es_mundo_superior) {
+                    printf("\n=== Mundo Superior ===\n");
+                    imprimir_mundo(cabeza_mundo_superior);
+                    printf("======================\n");
+                } else {
+                    printf("\n=== Mundo Paralelo ===\n");
+                    imprimir_mundo(cabeza_mundo_paralelo);
+                    printf("======================\n");
+                }
             }
         } 
     } else {
@@ -375,22 +394,26 @@ void transportar(Jugador *jugador) {
     }
 
     if (!jugador->aldea_actual->paralela) {
-        // Esto no debería ocurrir si los mundos están bien enlazados y el paralelo está desbloqueado.
         printf("Error crítico: No hay aldea paralela físicamente asociada a esta aldea.\n");
         return;
     }
 
-    // Si está en el mundo paralelo (!es_mundo_superior) y no ha derrotado ninguna mazmorra allí, no puede regresar al mundo superior.
-    // "Regresar" implica que la aldea destino (la paralela a la actual) es del mundo superior.
     if (!jugador->aldea_actual->es_mundo_superior && jugador->mazmorras_derrotadas_paralelo == 0) {
         printf("Debes derrotar al menos una mazmorra en el mundo paralelo antes de regresar al mundo superior.\n");
         return;
     }
 
-    jugador->aldea_actual = jugador->aldea_actual->paralela; // Realizar el transporte
+    jugador->aldea_actual = jugador->aldea_actual->paralela;
     printf("Te has transportado al %s. Ahora estás en %s\n",
-           (jugador->aldea_actual->es_mundo_superior) ? "mundo superior" : "mundo paralelo", // Usar el flag de la nueva aldea
+           (jugador->aldea_actual->es_mundo_superior) ? "mundo superior" : "mundo paralelo",
            jugador->aldea_actual->nombre);
+
+    // Imprimir el estado del mundo al que llegas
+    if (jugador->aldea_actual->es_mundo_superior) {
+        imprimir_mundo(cabeza_mundo_superior);
+    } else {
+        imprimir_mundo(cabeza_mundo_paralelo);
+    }
 }
 
 void mover(Jugador *jugador, char *direccion) {
@@ -468,7 +491,14 @@ void imprimir_mundo(Aldea *aldea) {
         if (aldea->mazmorra_asociada) {
             printf("  Mazmorra: %s\n", aldea->mazmorra_asociada->nombre);
             printf("  Ítem requerido: %s\n", aldea->mazmorra_asociada->item_requerido->nombre);
-            printf("  Ítem oculto: %s\n", aldea->mazmorra_asociada->item_oculto ? aldea->mazmorra_asociada->item_oculto->nombre : "Ninguno");
+            if (aldea->mazmorra_asociada->item_oculto) {
+                printf("  Ítem oculto: %s (%s)\n",
+                    aldea->mazmorra_asociada->item_oculto->nombre,
+                    aldea->mazmorra_asociada->item_oculto->encontrado ? "encontrado" : "no encontrado"
+                );
+            } else {
+                printf("  Ítem oculto: Ninguno\n");
+            }
             printf("  Derrotada: %s\n", aldea->mazmorra_asociada->derrotada ? "Sí" : "No");
         }
         if (aldea->item_oculto) {
@@ -519,6 +549,10 @@ void jugar(int num_aldeas) {
     srand(time(NULL));
     Aldea *mundo_superior = crear_aldeas(num_aldeas, true);
     Aldea *mundo_paralelo = crear_aldeas(num_aldeas, false);
+
+    // Asignar las cabezas globales
+    cabeza_mundo_superior = mundo_superior;
+    cabeza_mundo_paralelo = mundo_paralelo;
     
     asignar_mazmorras(mundo_superior, num_aldeas);
     asignar_mazmorras(mundo_paralelo, num_aldeas);
